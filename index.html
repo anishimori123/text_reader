@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radio v8.1.6 - Fixed + Stable + Persisted</title>
+<script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+<style>
+*{box-sizing:border-box;font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif}
+body{margin:0;background:#0a0a0e;color:#fff;min-height:100vh;padding:12px;display:flex;flex-direction:column;align-items:center}
+h1{font-size:18px;margin:4px 0}.sub{font-size:10px;color:#8ab4f8;margin-bottom:8px}
+.card{background:#16161c;border:1px solid #2a2a35;border-radius:16px;width:100%;max-width:880px;padding:12px;margin-bottom:8px}
+.card.live{border-color:#8ab4f8;background:#151925;position:sticky;top:8px;z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+.card.azure{border-color:#f8d87e;background:#1a1a12}
+textarea{width:100%;min-height:70px;background:#0f0f14;color:#fff;border:1px solid #333;border-radius:10px;padding:10px;font-size:13px}
+#display{width:100%;min-height:100px;background:#0f0f14;color:#aaa;border:1px solid #333;border-radius:10px;padding:10px;font-size:14px;line-height:2.0;white-space:pre-wrap;max-height:380px;overflow:auto}
+#display span{cursor:pointer;padding:2px 4px;border-radius:5px}
+#display span.active{background:#8ab4f8;color:#000;font-weight:700}
+#display span.done{color:#555}
+select,input{background:#0f0f14;color:#fff;border:1px solid #333;border-radius:8px;padding:7px 9px;font-size:11px}
+button{border:none;border-radius:10px;padding:9px 12px;font-size:11px;font-weight:700;cursor:pointer}
+.btn-real{background:linear-gradient(135deg,#8ab4f8,#ff8ab4);color:#000;flex:1;font-size:14px}
+.btn-dark{background:#26262f;color:#fff;min-width:70px}
+.btn-small{background:#22222a;color:#aaa;font-size:9px;padding:5px 9px;border-radius:16px;border:1px solid #333}
+.speed-chips,.voice-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.speed-chips button,.voice-chips button{background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 8px;border-radius:16px;font-size:10px}
+.speed-chips button.active,.voice-chips button.active{background:#8ab4f8;color:#000;font-weight:800}
+.azure-voices{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.azure-voices button{background:#1a1a12;border:1px solid #444;color:#f8d87e;padding:8px;border-radius:10px;font-size:10px}
+.azure-voices button.active{background:#f8d87e;color:#000;font-weight:800}
+.timer{background:#101018;border:1px solid #2a2a35;border-radius:10px;padding:6px 8px;margin-top:6px;display:flex;justify-content:space-between;font-size:11px}
+.progress{height:14px;background:#222;border-radius:10px;overflow:hidden;margin-top:6px;cursor:pointer;border:1px solid #333}
+.progress div{height:100%;background:linear-gradient(90deg,#8ab4f8,#ff8ab4);width:0%}
+.badge{font-size:8px;background:#222;padding:2px 6px;border-radius:8px;color:#888}
+.live-dot{width:8px;height:8px;background:#ff4b4b;border-radius:50%;display:inline-block;animation:pulse 1s infinite}
+@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+</style>
+</head>
+<body>
+<h1>🎙 Radio v8.1.6 — Fixed</h1>
+<div class="sub">Fixed: XML escape, timer pause, persist, rate, leak</div>
+<div class="card azure">
+<b style="color:#f8d87e">☁ Azure Speech HD — Persisted</b>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+<input type="password" id="azureKey" placeholder="Azure Key (saved locally)">
+<select id="azureRegion"><option value="japaneast">japaneast</option><option value="eastus">eastus</option><option value="westus">westus</option></select>
+</div>
+<div style="display:flex;gap:6px;margin-top:6px">
+<label style="font-size:10px;display:flex;align-items:center;gap:5px;background:#222;padding:6px 12px;border-radius:20px;border:1px solid #f8d87e"><input type="checkbox" id="azureMode"> Use Azure HD</label>
+<span class="badge" id="azureStatus">Not configured</span>
+<button class="btn-small" id="azureTest" style="background:#f8d87e;color:#000">Test</button>
+<button class="btn-small" id="azureClear">Clear</button>
+</div>
+<div class="azure-voices" id="azureVoiceChips">
+<button data-azvoice="ja-JP-NanamiNeural" class="active">Nanami HD</button>
+<button data-azvoice="ja-JP-MayuNeural">Mayu HD</button>
+<button data-azvoice="ja-JP-ShioriNeural">Shiori HD</button>
+<button data-azvoice="ja-JP-Sakura:DragonHDLatestNeural">Sakura Dragon</button>
+</div>
+</div>
+<div class="card live">
+<b><span class="live-dot" id="liveDot" style="display:none"></span> LIVE BOARD — v8.1.6 Fixed</b>
+<div class="voice-chips" id="voiceChips" style="margin-top:8px">
+<button data-voice="0">Keita</button><button data-voice="1">Daichi</button><button data-voice="2" class="active">Nanami DEFAULT</button><button data-voice="3">Aoi</button><button data-voice="4">Mayu</button><button data-voice="5">Emi</button><button data-voice="6">Yuki</button><button data-voice="7">Haru</button>
+</div>
+<div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+<input type="range" id="liveSpeed" min="0.25" max="3" step="0.05" value="2" style="flex:1"><span id="fineLabel" style="color:#8ab4f8;font-weight:800">2.00x</span>
+</div>
+<div class="speed-chips" id="chips"><button data-speed="0.5">0.5x</button><button data-speed="1">1x</button><button data-speed="1.5">1.5x</button><button data-speed="2" class="active">2x</button><button data-speed="2.5">2.5x</button><button data-speed="3">3.0x</button></div>
+<div style="display:flex;gap:6px;margin-top:8px"><button class="btn-real" id="playReal">PLAY 2x</button><button class="btn-dark" id="pauseBtn">Pause</button><button class="btn-dark" id="stopBtn">Stop</button></div>
+<div class="timer"><div><b id="totalTime">0:00</b> <span class="badge" id="charCount">0字</span> <span class="badge" id="curSpeedBadge">2x</span> <span class="badge" id="curVoiceBadge">Nanami</span> <span class="badge" id="liveStatus">Ready</span></div><div><b id="pct">0%</b></div><div><b id="remainTime">0:00</b></div></div>
+<div class="progress" id="progressBar"><div id="prog"></div></div>
+<div style="font-size:8px;color:#8ab4f8;margin-top:4px" id="voiceDebug">v8.1.6 loaded</div>
+</div>
+<div class="card"><b>📝 Text Input</b><textarea id="txt">おはようございます。こんにちは！</textarea><div id="display" style="display:none"></div><div id="sysVoiceList" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px"></div></div>
+<script>
+let isPlaying=false,currentIdx=0,parts=[],systemVoices=[],currentVoiceIdx=2,currentRate=2,totalSec=0,startTime=null,pausedElapsed=0,timerInt=null,speechGen=0,lastJumpTime=0,selectedSysVoiceIdx=0;
+let azureKey='',azureRegion='japaneast',azureMode=false,azureVoice='ja-JP-NanamiNeural',azureSynthesizer=null;
+const voiceMap=[{name:'Keita',short:'Keita',pitch:1},{name:'Daichi',short:'Daichi',pitch:1.18},{name:'Nanami',short:'Nanami',pitch:.72},{name:'Aoi',short:'Aoi',pitch:.85},{name:'Mayu',short:'Mayu',pitch:.62},{name:'Emi',short:'Emi',pitch:.95},{name:'Yuki',short:'Yuki',pitch:.78},{name:'Haru',short:'Haru',pitch:.88}];
+const txt=document.getElementById('txt'),disp=document.getElementById('display');
+function escapeXml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');}
+function splitRadioSegments(t){return t.replace(/([。！？])/g,'$1\n').split('\n').map(x=>x.trim()).filter(x=>{if(!x||x.length<2)return false;if(/^[:：]+$/.test(x))return false;if(/^[…\.・·～〜ー\-]+$/.test(x))return false;if(!/[ぁ-んァ-ン一-龥a-zA-Z0-9]/.test(x))return false;return true;});}
+function buildDisplay(text){let ps=splitRadioSegments(text);disp.innerHTML='';ps.forEach((p,i)=>{let sp=document.createElement('span');sp.textContent=p;sp.id='c-'+i;sp.onclick=()=>jumpTo(i);disp.appendChild(sp);});document.getElementById('voiceDebug').textContent='v8.1.6 | '+ps.length+' segs';return ps;}
+function loadVoices(){let all=speechSynthesis.getVoices();systemVoices=all.filter(v=>v.lang.includes('ja'));if(!systemVoices.length)systemVoices=all;let list=document.getElementById('sysVoiceList');if(list){list.innerHTML='';systemVoices.forEach((v,i)=>{let b=document.createElement('button');b.className='btn-small';b.style.background=i===selectedSysVoiceIdx?'#8ab4f8':'#222';b.textContent=v.name.slice(0,22);b.onclick=()=>{selectedSysVoiceIdx=i;localStorage.setItem('radio_sysVoice',i);loadVoices();if(isPlaying&&!azureMode)forceMorphCurrent();};list.appendChild(b);});}}
+speechSynthesis.onvoiceschanged=loadVoices;loadVoices();setTimeout(loadVoices,800);
+function getVoiceForChip(){return systemVoices[selectedSysVoiceIdx]||systemVoices[0]||null;}
+function updateAllUI(){let v=voiceMap[currentVoiceIdx];document.getElementById('fineLabel').textContent=currentRate.toFixed(2)+'x';document.getElementById('curSpeedBadge').textContent=currentRate+'x';document.getElementById('curVoiceBadge').textContent=azureMode?azureVoice.split('-').pop():v.short;document.getElementById('liveStatus').textContent=isPlaying?(speechSynthesis.paused?'Paused '+currentIdx:'PLAYING '+currentIdx):'Ready';document.getElementById('pauseBtn').textContent=speechSynthesis.paused?'Resume':'Pause';document.getElementById('liveDot').style.display=isPlaying&&!speechSynthesis.paused?'inline-block':'none';document.querySelectorAll('#chips button').forEach(b=>b.classList.toggle('active',Math.abs(parseFloat(b.dataset.speed)-currentRate)<0.001));document.querySelectorAll('#voiceChips button').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.voice)==currentVoiceIdx));document.getElementById('liveSpeed').value=currentRate;document.querySelectorAll('#azureVoiceChips button').forEach(b=>b.classList.toggle('active',b.dataset.azvoice===azureVoice));}
+function closeAzure(){if(azureSynthesizer){try{azureSynthesizer.close();}catch(e){}azureSynthesizer=null;}}
+function forceMorphCurrent(){if(!isPlaying)return;speechGen++;let myGen=speechGen,saveIdx=currentIdx;speechSynthesis.cancel();closeAzure();setTimeout(()=>{if(myGen!==speechGen)return;isPlaying=true;highlight(saveIdx);speakAt(saveIdx,myGen);},300);}
+function setSpeed(v){currentRate=parseFloat(v);localStorage.setItem('radio_rate',currentRate);updateAllUI();if(isPlaying)forceMorphCurrent();}
+function setVoice(i){currentVoiceIdx=parseInt(i);localStorage.setItem('radio_voice',currentVoiceIdx);updateAllUI();if(isPlaying)forceMorphCurrent();}
+function setAzureVoice(n){azureVoice=n;localStorage.setItem('radio_azVoice',n);updateAllUI();if(isPlaying&&azureMode)forceMorphCurrent();}
+document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>setSpeed(b.dataset.speed));
+document.querySelectorAll('#voiceChips button').forEach(b=>b.onclick=()=>setVoice(b.dataset.voice));
+document.querySelectorAll('#azureVoiceChips button').forEach(b=>b.onclick=()=>setAzureVoice(b.dataset.azvoice));
+document.getElementById('liveSpeed').oninput=e=>setSpeed(e.target.value);
+const azureKeyEl=document.getElementById('azureKey'),azureRegionEl=document.getElementById('azureRegion'),azureModeEl=document.getElementById('azureMode');
+function persistAzure(){if(azureKey)localStorage.setItem('radio_azureKey',azureKey);localStorage.setItem('radio_azureRegion',azureRegion);localStorage.setItem('radio_azureMode',azureMode);localStorage.setItem('radio_azVoice',azureVoice);}
+if(azureKeyEl){azureKeyEl.value=localStorage.getItem('radio_azureKey')||'';azureKey=azureKeyEl.value;azureKeyEl.oninput=e=>{azureKey=e.target.value;persistAzure();};}
+if(azureRegionEl){azureRegionEl.value=localStorage.getItem('radio_azureRegion')||'japaneast';azureRegion=azureRegionEl.value;azureRegionEl.onchange=e=>{azureRegion=e.target.value;persistAzure();};}
+if(azureModeEl){azureMode=(localStorage.getItem('radio_azureMode')==='true');azureModeEl.checked=azureMode;azureModeEl.onchange=e=>{azureMode=e.target.checked;persistAzure();updateAllUI();if(isPlaying)forceMorphCurrent();};}
+let sr=localStorage.getItem('radio_rate');if(sr)currentRate=parseFloat(sr);let sv=localStorage.getItem('radio_voice');if(sv)currentVoiceIdx=parseInt(sv);let saz=localStorage.getItem('radio_azVoice');if(saz)azureVoice=saz;
+document.getElementById('azureTest').onclick=()=>{if(!azureKey){alert('Need key');return;}if(typeof SpeechSDK==='undefined'){alert('SDK not loaded');return;}try{let cfg=SpeechSDK.SpeechConfig.fromSubscription(azureKey,azureRegion);cfg.speechSynthesisVoiceName=azureVoice;let synth=new SpeechSDK.SpeechSynthesizer(cfg);let rate=(currentRate-1)*100;let ssml=`<speak><voice name="${azureVoice}"><prosody rate="${rate>0?'+':''}${rate.toFixed(0)}%" pitch="0%">${escapeXml('テストです')}</prosody></voice></speak>`;synth.speakSsmlAsync(ssml,r=>{synth.close();},e=>{synth.close();alert(e);});}catch(err){alert(err);}};
+document.getElementById('azureClear').onclick=()=>{localStorage.removeItem('radio_azureKey');azureKeyEl.value='';azureKey='';};
+function forceJumpTo(idx){speechGen++;let myGen=speechGen;if(!parts.length){let t=txt.value.trim();if(!t)return;parts=buildDisplay(t);txt.style.display='none';disp.style.display='block';totalSec=Math.round(parts.join('').length/4.5/currentRate);}speechSynthesis.cancel();closeAzure();setTimeout(()=>{if(myGen!==speechGen)return;isPlaying=true;if(!startTime){startTime=Date.now();pausedElapsed=0;}currentIdx=Math.max(0,Math.min(idx,parts.length-1));highlight(currentIdx);speakAt(currentIdx,myGen);},200);}
+function jumpTo(idx){let now=Date.now();if(now-lastJumpTime<250)return;lastJumpTime=now;forceJumpTo(idx);}
+function highlight(idx){document.querySelectorAll('#display span').forEach((el,i)=>{el.classList.remove('active');if(i<idx)el.classList.add('done');});let cur=document.getElementById('c-'+idx);if(cur){cur.classList.add('active');cur.scrollIntoView({behavior:'smooth',block:'center'});}}
+function fmt(s){s=Math.max(0,s);let m=Math.floor(s/60),sec=s%60;return m+':'+String(sec).padStart(2,'0');}
+function createAzureSynth(){if(!azureKey)return null;if(typeof SpeechSDK==='undefined')return null;try{let cfg=SpeechSDK.SpeechConfig.fromSubscription(azureKey,azureRegion);cfg.speechSynthesisVoiceName=azureVoice;return new SpeechSDK.SpeechSynthesizer(cfg);}catch(e){return null;}}
+function speakAt(idx,gen){if(gen!==speechGen)return;if(idx>=parts.length){isPlaying=false;document.getElementById('prog').style.width='100%';document.getElementById('pct').textContent='100%';clearInterval(timerInt);timerInt=null;updateAllUI();return;}currentIdx=idx;let c=parts[idx].trim();if(!c){currentIdx++;speakAt(currentIdx,gen);return;}highlight(idx);let pct=Math.round((idx/parts.length)*100);document.getElementById('prog').style.width=pct+'%';document.getElementById('pct').textContent=pct+'%';document.getElementById('totalTime').textContent=fmt(totalSec);document.getElementById('charCount').textContent=parts.join('').length+'字';if(azureMode&&azureKey){closeAzure();azureSynthesizer=createAzureSynth();if(!azureSynthesizer){speakBrowser(c,gen);return;}let rate=(currentRate-1)*100;let ssml=`<speak version="1.0" xml:lang="ja-JP"><voice name="${azureVoice}"><prosody rate="${rate>0?'+':''}${rate.toFixed(0)}%" pitch="0%">${escapeXml(c)}</prosody></voice></speak>`;azureSynthesizer.speakSsmlAsync(ssml,r=>{if(gen!==speechGen)return;currentIdx++;setTimeout(()=>speakAt(currentIdx,gen),180);},e=>{closeAzure();speakBrowser(c,gen);});}else{speakBrowser(c,gen);}}
+function speakBrowser(c,gen){let u=new SpeechSynthesisUtterance(c);let rv=getVoiceForChip();if(rv)u.voice=rv;u.lang='ja-JP';let vm=voiceMap[currentVoiceIdx];u.rate=Math.min(3,Math.max(.1,currentRate));u.pitch=Math.min(2,Math.max(0,vm.pitch));u.onend=()=>{if(gen!==speechGen)return;if(isPlaying&&!speechSynthesis.paused){currentIdx++;setTimeout(()=>speakAt(currentIdx,gen),200);}};u.onerror=()=>{if(gen!==speechGen)return;currentIdx++;speakAt(currentIdx,gen);};speechSynthesis.speak(u);updateAllUI();}
+function startPlayback(text){speechGen++;let myGen=speechGen;parts=buildDisplay(text);txt.style.display='none';disp.style.display='block';speechSynthesis.cancel();closeAzure();isPlaying=true;currentIdx=0;totalSec=Math.round(parts.join('').length/4.5/currentRate);document.getElementById('totalTime').textContent=fmt(totalSec);startTime=Date.now();pausedElapsed=0;clearInterval(timerInt);timerInt=setInterval(()=>{if(isPlaying&&!speechSynthesis.paused){let elapsed=Math.floor((Date.now()-startTime-pausedElapsed)/1000);document.getElementById('remainTime').textContent=fmt(Math.max(0,totalSec-elapsed));}},400);updateAllUI();speakAt(0,myGen);}
+document.getElementById('playReal').onclick=()=>{let t=txt.value.trim();if(!t){alert('Paste Japanese');return;}if(speechSynthesis.paused&&isPlaying){speechSynthesis.resume();updateAllUI();return;}startPlayback(t);};
+let pauseStart=0;
+document.getElementById('pauseBtn').onclick=()=>{if(!isPlaying)return;if(azureMode){alert('Azure pause not supported');return;}if(speechSynthesis.paused){speechSynthesis.resume();if(pauseStart)pausedElapsed+=Date.now()-pauseStart;pauseStart=0;}else{speechSynthesis.pause();pauseStart=Date.now();}updateAllUI();};
+document.getElementById('stopBtn').onclick=()=>{speechGen++;isPlaying=false;speechSynthesis.cancel();closeAzure();clearInterval(timerInt);timerInt=null;document.getElementById('prog').style.width='0%';document.getElementById('pct').textContent='0%';startTime=null;pausedElapsed=0;updateAllUI();};
+document.getElementById('progressBar').onclick=e=>{if(!parts.length){let t=txt.value.trim();if(t){startPlayback(t);return;}return;}let rect=e.currentTarget.getBoundingClientRect();let x=e.clientX-rect.left;let pct=x/rect.width;let idx=Math.floor(pct*parts.length);forceJumpTo(idx);};
+updateAllUI();
+</script>
+</body>
+</html>
